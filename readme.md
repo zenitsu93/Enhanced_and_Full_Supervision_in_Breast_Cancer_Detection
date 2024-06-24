@@ -1,49 +1,76 @@
-### Breast Cancer Detection Using Ultrasound Images
+# Détection du cancer du sein sur images échographiques
 
-#### A. Objectives
-The primary objective of this project is to enhance the accuracy and efficiency of breast cancer detection using ultrasound images by leveraging both weakly supervised and fully supervised learning models. To achieve this, we utilized pre-trained CNN models such as VGG19, MobileNet, and ResNet50. This approach aims to address the data annotation challenges by exploring alternative supervised learning techniques.
+Comparaison de la **supervision complète** et de la **supervision faible** pour la classification d'images échographiques mammaires, à partir de réseaux convolutifs pré-entraînés : VGG19, ResNet50 et MobileNet.
 
-#### B. Methodology
-1. **Data Collection and Preprocessing:**
-   - We collected a comprehensive dataset of ultrasound images, ensuring a diverse representation of breast cancer cases.
-   - The images were preprocessed to ensure uniformity and optimal input quality for the DL models.
+La question posée est pratique. Annoter une échographie pixel par pixel mobilise un radiologue ; une étiquette au niveau de l'image coûte une fraction de ce temps. Jusqu'où peut-on descendre en qualité d'annotation sans perdre la détection ?
 
-2. **Model Selection:**
-   - Three pre-trained CNN models were employed:
-   - Fully supervised learning models
-      - VGG19
-        ![fsl_vgg19](https://github.com/ChristianthomasBADOLO/Enhanced_and_Full_Supervision_in_Breast_Cancer_Detection/assets/167626485/8d916217-dc1a-4321-bf99-c2339365cf94)
-      - MobileNet
-        ![fsl_mobilenet](https://github.com/ChristianthomasBADOLO/Enhanced_and_Full_Supervision_in_Breast_Cancer_Detection/assets/167626485/3ff28d8b-b48a-43bd-b1bf-90029dd2daf0)
-      - ResNet50.
-        ![fsl_resnet50](https://github.com/ChristianthomasBADOLO/Enhanced_and_Full_Supervision_in_Breast_Cancer_Detection/assets/167626485/b014928c-7546-464e-af14-be92ebfcff5b)
-   - These models were selected for their effectiveness in image recognition and classification tasks.
+## Résultats
 
-3. **Weakly Supervised Learning:**
-   - Weakly supervised learning techniques were applied to leverage partially labeled data.
-   - This involved using image-level labels rather than requiring detailed pixel-level annotations, reducing dependency on extensive manual annotations by radiologists.
+Score AUC en validation, relevé sur les courbes d'entraînement des notebooks.
 
-4. **Fully Supervised Learning:**
-   - Fully supervised learning models were trained using meticulously annotated datasets.
-   - This approach ensures high accuracy by utilizing detailed, expert-provided annotations.
+| Modèle | Supervision | AUC validation | Comportement observé |
+| --- | --- | --- | --- |
+| **ResNet50** | complète | **≈ 0,953** | le plus stable, perte de validation presque plate sur 55 époques |
+| VGG19 | complète | ≈ 0,945 | perte de validation qui décroche dès la cinquième époque |
+| MobileNet | complète | ≈ 0,933 | convergence rapide, mais plafond plus bas |
 
-5. **Training and Validation:**
-   - Models were trained on preprocessed ultrasound images, with separate datasets for weakly and fully supervised learning.
-   - Performance was validated using a hold-out validation set to assess model accuracy and reliability.
+La supervision complète l'emporte, ResNet50 en tête.
 
-6. **Evaluation and Comparison:**
-   - Performance of weakly supervised models was compared with fully supervised models.
-   - Metrics such as accuracy, sensitivity, specificity, and F1-score were used to evaluate model performance.
+Un point mérite d'être dit clairement : les trois modèles atteignent 1,0 en entraînement alors que la validation plafonne sous 0,96. Le surapprentissage est franc. La marge de progression est donc du côté de la régularisation et de l'augmentation de données, pas de la capacité du réseau.
 
-#### C. Results
-- Fully supervised models outperformed weakly supervised models, demonstrating superior accuracy and robustness in breast cancer detection.
-  ![resnet_train](https://github.com/ChristianthomasBADOLO/Enhanced_and_Full_Supervision_in_Breast_Cancer_Detection/assets/167626485/1353db59-42f6-4017-b285-1134017f8bc9)
-  ![restnet_test](https://github.com/ChristianthomasBADOLO/Enhanced_and_Full_Supervision_in_Breast_Cancer_Detection/assets/167626485/c1c99395-44c2-4bcd-b81c-7977ed5d7ab2)
-- Among tested models, fully supervised ResNet50 showed the highest performance, significantly surpassing VGG19 and MobileNet.
+### ResNet50 — supervision complète
 
-#### D. Conclusion
-This project showcases the effectiveness of fully supervised learning for breast cancer detection using ultrasound images. Integration of pre-trained CNN models like VGG19, MobileNet, and ResNet50 provides a robust solution, with fully supervised ResNet50 delivering the best diagnostic accuracy. Future work will focus on optimizing these models further and exploring semi-supervised and unsupervised learning techniques to reduce dependency on annotated datasets.
+![ResNet50 : AUC et perte, entraînement contre validation](assets/fsl_resnet50-1.png)
 
----
+Le meilleur compromis : la validation monte jusqu'à 0,953 et la perte reste stable, sans le décrochage visible sur les deux autres.
 
-Feel free to adapt and expand upon this README template for your GitHub repository.
+### VGG19 — supervision complète
+
+![VGG19 : AUC et perte](assets/fsl_vgg19-1.png)
+
+L'AUC de validation est proche de ResNet50, mais la perte de validation remonte nettement après la cinquième époque — le modèle mémorise.
+
+### MobileNet — supervision complète
+
+![MobileNet : AUC et perte](assets/fsl_mobilenet-1.png)
+
+Convergence la plus rapide, plafond le plus bas. Le compromis attendu d'une architecture légère.
+
+### Supervision faible
+
+![Supervision faible : ResNet50 et MobileNet](assets/wsl_resnet50_and_mobilenet-1.png)
+
+Entraînement sur étiquettes au niveau de l'image, sans annotation pixel par pixel.
+
+## Méthode
+
+1. **Préparation** — constitution du jeu d'échographies mammaires, uniformisation des dimensions et normalisation.
+2. **Transfert d'apprentissage** — trois dorsales pré-entraînées sur ImageNet, tête de classification réentraînée.
+3. **Deux régimes de supervision** — annotations complètes d'un côté, étiquettes au niveau de l'image de l'autre.
+4. **Entraînement** — arrêt anticipé sur la perte de validation, augmentation par `ImageDataGenerator`.
+5. **Évaluation** — AUC, précision, rappel et rapport de classification sur un jeu de validation disjoint.
+
+## Contenu du dépôt
+
+| Fichier | Rôle |
+| --- | --- |
+| `FSL_resnet50.ipynb` | Supervision complète, ResNet50 — le modèle retenu |
+| `FSL_vgg19.ipynb` | Supervision complète, VGG19 |
+| `FSL_mobilenet.ipynb` | Supervision complète, MobileNet |
+| `WSL_resnet50_and_mobilenet.ipynb` | Supervision faible sur les deux dorsales |
+| `assets/` | Figures extraites des notebooks |
+
+## Exécution
+
+Les notebooks tournent sous TensorFlow / Keras avec scikit-learn pour les métriques.
+
+```bash
+pip install tensorflow scikit-learn matplotlib pandas numpy
+jupyter notebook FSL_resnet50.ipynb
+```
+
+Le chemin du jeu de données est à renseigner dans la cellule de chargement.
+
+## Suites possibles
+
+Le surapprentissage constaté oriente le travail : régularisation plus sévère, augmentation plus agressive, et validation croisée plutôt qu'un simple jeu de validation. Les approches semi-supervisées et auto-supervisées restent la piste la plus intéressante pour réduire encore la dépendance à l'annotation.
